@@ -23,6 +23,35 @@ sha256sum submission.zip
 Compare against the file that was uploaded to the Round 3 form. If they differ,
 stop and record against the uploaded one instead — not against `main`.
 
+### The freeze is enforced, not remembered
+
+Nobody edits the marketplace meaning to break the integrity gate. They fix a
+typo in a SKILL.md, regenerate a golden, let an editor rewrite line endings —
+and the tree silently stops matching the artifact the judges hold.
+
+```bash
+python3 round4/check_engine_frozen.py
+```
+
+Asserts every file in `brand-ai-readiness-audit/` is byte-identical to the
+corresponding entry in `submission.zip`, with nothing added and nothing missing.
+A single stray newline fails it. CI runs it on every push.
+
+Pin the artifact once, against the file you actually uploaded:
+
+```bash
+sha256sum <the zip you uploaded>            # confirm it is the right file
+python3 round4/check_engine_frozen.py --pin --against <the zip you uploaded>
+```
+
+That catches the one case a tree-vs-zip comparison cannot: rebuilding the zip
+makes both sides agree with each other and disagree with the judges' copy.
+
+**Everything for Round 4 is additive.** `round4/` sits outside the marketplace
+and `package_submission.py` packs only the marketplace directory, so nothing
+here can reach the submitted artifact. Build on the existing files; do not edit
+them.
+
 To demo from the exact submitted artifact rather than the working tree:
 
 ```bash

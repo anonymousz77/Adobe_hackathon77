@@ -78,6 +78,12 @@ jobs:
           print(f"report schema OK: {len(report['findings'])} findings, all required fields present")
           PY
 
+      # Round 4 demos the Round 3 engine. A marketplace edit after submission is
+      # an integrity failure, so the freeze is enforced here rather than
+      # remembered. Additive work (round4/, repo-root docs) is unaffected.
+      - name: Round 3 engine must stay frozen
+        run: python round4/check_engine_frozen.py
+
       - name: submission.zip must be in sync with the marketplace
         run: |
           git diff --exit-code -- submission.zip \
