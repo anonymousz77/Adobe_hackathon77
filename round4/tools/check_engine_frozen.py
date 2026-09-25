@@ -40,7 +40,9 @@ EXCLUDE_NAMES = {".DS_Store", ".gitattributes", ".gitignore"}
 EXCLUDE_SUFFIXES = {".pyc", ".pyo", ".pyd", ".zip"}
 
 # In the folder a demo runs from, these are outputs of the run or the harness's
-# wiring, never part of the engine.
+# wiring, never part of the engine. Any other top-level folder that holds an
+# audit-report.json (e.g. ./audit-replay from a --bundle re-analysis) is run
+# output too.
 DEMO_ALLOWED_TOP = {"audit-output", ".claude", "__pycache__"}
 
 FAILURES: list[str] = []
@@ -68,11 +70,14 @@ def zip_files(path: Path) -> dict[str, bytes]:
 
 def tree_files(root: Path, demo: bool = False) -> dict[str, bytes]:
     out: dict[str, bytes] = {}
+    outputs = set(DEMO_ALLOWED_TOP)
+    if demo:
+        outputs |= {d.name for d in root.iterdir() if d.is_dir() and (d / "audit-report.json").is_file()}
     for path in root.rglob("*"):
         if not path.is_file():
             continue
         rel = path.relative_to(root)
-        if demo and rel.parts[0] in DEMO_ALLOWED_TOP:
+        if demo and rel.parts[0] in outputs:
             continue
         if any(p in EXCLUDE_DIRS for p in rel.parts):
             continue
