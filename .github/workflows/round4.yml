@@ -48,7 +48,7 @@ jobs:
           python-version: "3.11.15"
       - name: REPLAY_IT_Professionals.txt parses and its fallback path replays
         if: hashFiles('round4/REPLAY_IT_Professionals.txt') != ''
-        run: python round4/tools/verify_replay.py round4/REPLAY_IT_Professionals.txt --evidence 4
+        run: python round4/tools/verify_replay.py round4/REPLAY_IT_Professionals.txt --twice --evidence 4
 
   url-list:
     runs-on: ubuntu-latest
@@ -108,11 +108,11 @@ jobs:
       - name: Diagnostics for findings under review
         continue-on-error: true
         run: |
-          echo "--- docs.pytest.org redirect chain and <base>"
-          curl -sIL https://docs.pytest.org/ | grep -iE '^(HTTP|location)'
-          curl -sL https://docs.pytest.org/ | grep -io '<base[^>]*>' | head -3
-          curl -sL https://docs.pytest.org/ | grep -o 'href="[^"]*changelog[^"]*"' | head -3
-          curl -sI https://docs.pytest.org/changelog.html | head -1
-          curl -sI https://docs.pytest.org/en/stable/changelog.html | head -1
-          echo "--- theguardian.com robots.txt around the cited line"
-          curl -s https://www.theguardian.com/robots.txt | sed -n '70,110p'
+          echo "--- www.mit.edu canonical tags (engine: cross-host canonical to tlecms.mit.edu)"
+          for p in / /about; do echo "$p"; curl -sL "https://www.mit.edu$p" | grep -io '<link[^>]*rel="canonical"[^>]*>' | head -2; done
+          echo "--- vercel.com/docs context of 'you are Claude' (engine: prompt injection, critical)"
+          curl -sL https://vercel.com/docs | grep -o '.\{0,300\}you are Claude.\{0,200\}' | head -3
+          echo "--- theguardian.com homepage JSON-LD blocks (engine: none on the homepage)"
+          curl -sL https://www.theguardian.com/ | grep -c 'application/ld+json'
+          echo "--- bbc.com robots.txt lines cited by F-001"
+          curl -s https://www.bbc.com/robots.txt | sed -n '110,182p' | grep -n -iE 'user-agent|disallow: /$' | head -40

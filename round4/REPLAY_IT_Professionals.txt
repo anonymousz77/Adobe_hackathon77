@@ -1,0 +1,119 @@
+TEST_SITE_URLS:   https://www.theguardian.com/, https://www.bbc.com/, https://example.com/
+LLM_MODEL:        Claude Opus 5.5 (API model id claude-opus-5-5), used September 2026
+AGENT_HARNESS:    Claude Code v2.1.282
+ENV_SETUP:        Engine: Python 3.9+ standard library only, nothing to pip install (the run passes --no-render, so no browser is needed). Harness: Node.js 18+, then npm install -g @anthropic-ai/claude-code@2.1.282, then run claude once to sign in.
+TEST_STEPS:
+  1. In the folder that holds the Round 3 package (submission.zip), unpack it, enter the marketplace root, give Claude Code an unchanged copy of the skills in the one place it looks for them (.claude/skills; the agent still runs the scripts in skills/), and start the harness with the disclosed model:
+       python3 -m zipfile -e submission.zip brand-ai-readiness-audit
+       cd brand-ai-readiness-audit
+       python3 -c "import shutil; shutil.copytree('skills', '.claude/skills')"
+       claude --model claude-opus-5-5 --allowedTools "Skill" "Bash(python:*)" "Bash(python3:*)" "Read" "Grep" "Glob"
+     On Windows (PowerShell or cmd) the same four lines work with python in place of python3.
+  2. Paste this prompt verbatim, then type the site's URL at the very end, after "URL:" (the video types https://www.theguardian.com/; any URL works, including your own choice):
+       Use the ai-readiness-orchestrator skill, the entrypoint of this Agent Skill Marketplace (skills/ai-readiness-orchestrator/SKILL.md), to audit the website given at the end of this message. Follow its Procedure from this folder by running exactly this one command: python skills/ai-readiness-orchestrator/scripts/orchestrate.py <URL> --out ./audit-output --no-render (use python3 if python is not Python 3). Do not create, edit or delete any file yourself, and never add, drop, reword or re-rank findings: the report is the engine's. When it finishes, read ./audit-output/audit-report.json and reply in under 50 lines with: (1) site, audit_status, pages fetched, counts by severity, the checks the report lists as not assessed (limitations and evidence_bundle.degraded_capabilities), and how many findings the gate cascade capped (blocked_by) behind which finding id; (2) the top 8 findings in report order, which is the engine's priority order, as a table of rank, id, severity, confidence, ICE, check_id and title, showing a check_id that repeats once with its count and id range; (3) one line on how that order is computed, citing the function in skills/ai-readiness-orchestrator/scripts/severity.py; (4) a drill-down on the first finding in report order whose confidence is confirmed: quote its evidence, name the script that implements its check_id (search skills/*/scripts), say why it has that severity using skills/ai-readiness-orchestrator/references/severity-model.md, give the fix (summary and mechanism) and the paste-ready patch, then corroborate the evidence against the live site with one python -c command using urllib and say in one line whether what you saw supports it, quoting what you saw. URL:
+  3. The agent loads the entrypoint with the Skill tool (Skill: ai-readiness-orchestrator), then runs the marketplace entrypoint:
+       python skills/ai-readiness-orchestrator/scripts/orchestrate.py <URL> --out ./audit-output --no-render
+     The engine writes ./audit-output/audit-report.json (fixed schema), report.md (plain-English version, "What to do first" at the top), fix_patches/ (one paste-ready patch per finding) and evidence/ (the evidence bundle every finding was computed from), and prints a JSON summary. Findings are already in priority order: severity, then ICE score, then stage, then check_id. The agent then prints in the terminal the status and counts, the top-8 table with ICE, how the order is computed, and a drill-down on the first confirmed finding that it checks against the live site.
+EXPECTED_OUTPUT:  brand-ai-readiness-audit/audit-output/audit-report.json
+
+# ==============================================================================
+# Everything below is commentary. The labelled fields above are the manifest.
+# Team IT_Professionals: Lakshya, Tanmay, Kalpit.
+# ==============================================================================
+#
+# ---- THE ENGINE IS THE ROUND 3 SUBMISSION, UNCHANGED --------------------------
+# SHA-256 of the submitted zip (155 files):
+#   1c872c598dcac741c712cbf9e671f024881a9ba251e2b4da66995f81b6cf8dcf  submission.zip
+# Check: sha256sum submission.zip   (macOS: shasum -a 256 submission.zip;
+#        Windows: certutil -hashfile submission.zip SHA256)
+# Every finding, severity, ICE score, patch and ranking is computed by
+# orchestrate.py. The model only invokes the entrypoint, reads the report back
+# and checks one finding against the live site; it adds nothing to the report.
+#
+# ---- FALLBACK RUN PATH: NO HARNESS, NO MODEL, NO INSTALL ----------------------
+# The findings come from the deterministic engine, so any Python 3.9+ reproduces
+# the same report without an agent. From the marketplace root (step 1):
+#   python3 skills/ai-readiness-orchestrator/scripts/orchestrate.py https://www.theguardian.com/ --out ./audit-output --no-render
+# Then open audit-output/report.md ("What to do first" lists the fixes in
+# priority order, each with ICE, mechanism and a verify command) or
+# audit-output/audit-report.json, the same file the agent reads.
+#
+# ---- A DIFFERENT HARNESS OR MODEL ---------------------------------------------
+# The step-2 prompt needs only an agent that can read files and run shell
+# commands (Codex CLI, Copilot CLI, OpenCode, Gemini CLI, a custom runner): start
+# it in the marketplace root and paste the same prompt. Where there is no Skill
+# tool, the prompt names the entrypoint's path and the agent reads that SKILL.md
+# and follows its Procedure; the .claude/skills copy is then not needed. With a
+# different model the wording of the reply changes; the findings, severities,
+# ICE scores and order do not, because the model does not produce them.
+#
+# ---- WHAT THE VIDEO'S RUN FINDS ON https://www.theguardian.com/ ---------------
+# Substance, not exact strings (the site publishes all day, so page-level
+# findings move; the robots.txt finding and the cascade do not while its
+# robots.txt is unchanged). Runs of 2026-09-25:
+#   F-001 critical, confirmed, ICE 9.3, reach.robots.ai_search_bot_blocked:
+#     robots.txt line 102 "Disallow: /" closes a group that names six AI
+#     retrieval crawlers (Amazonbot, Claude-SearchBot, Claude-User,
+#     DuckAssistBot, Google-CloudVertexBot, PerplexityBot). Retrieval crawlers
+#     fetch at answer time to cite a source, so those assistants cannot cite
+#     the site. Check it yourself: https://www.theguardian.com/robots.txt
+#   The gate cascade: 37 of the 41 discoverability findings are recorded but
+#     capped at medium with blocked_by F-001. Engagement (act.*) findings are
+#     never capped by crawler access. Training-only crawlers blocked in the same
+#     group are reported separately as info (a licensing choice, not a defect),
+#     contested ones (e.g. Applebot-Extended) as medium.
+#   audit_status is "partial" because the run passes --no-render: the report
+#     lists the three browser-dependent checks as not assessed, and the two
+#     CDN/WAF checks as not assessed without --probe-bot-ua (opt-in, never used
+#     on a site we do not own). Nothing is passed silently.
+# https://www.bbc.com/ shows the same mechanism with one Disallow per crawler
+# group (six retrieval crawlers, lines 115-181), and https://example.com/ the
+# other end of the scale: one 19-word page, six medium findings, no high.
+#
+# ---- JUDGE-CHOSEN URL ---------------------------------------------------------
+# Change only the URL after "URL:" in step 2 (or in the fallback command). A run
+# is bounded at 300 s by the engine's --time-budget; typical runs took 6-60 s
+# for the engine plus about a minute for the agent. robots.txt is obeyed: a
+# site that disallows crawling produces a report that says what could not be
+# looked at, and still exits 0. Exit code 0 means a schema-valid report was
+# written; the outcome is in audit_status (complete / partial /
+# no_content_available). A site with a very large robots.txt Crawl-delay can
+# need --time-budget 600.
+#
+# ---- DETERMINISM --------------------------------------------------------------
+# Same evidence in, same report out: re-analysing the saved bundle gives a report
+# identical to the live run in every field except evidence_bundle.path:
+#   python3 skills/ai-readiness-orchestrator/scripts/orchestrate.py --bundle ./audit-output/evidence --out ./audit-replay
+# The order is total (severity, ICE, stage, check_id, URL), so ties never
+# reorder. Between two live runs, only the site changes the substance.
+# Offline self-test, no network: python3 tests/run_offline.py (six golden
+# reports byte for byte; exact on Python 3.11.15, the version the goldens were
+# recorded with; on other versions only generator.tool_versions.python differs).
+#
+# ---- WHY --no-render ----------------------------------------------------------
+# It keeps the replay independent of whether a judge has a headless browser
+# installed, so everyone gets the same report. The engine then says which three
+# checks it could not assess instead of passing them. The rendered mode exists
+# (install Playwright and drop the flag), but we do not use it here: its
+# rendered-DOM link count also counts off-site links, which can overstate a
+# JavaScript link gap (seen on proxy.golang.org, a static page).
+#
+# ---- KNOWN LIMITS OF THE FROZEN ENGINE (recorded, not fixed: it is frozen) ----
+# Found in our pre-recording test run over 20 real sites; the agent's live
+# corroboration in step 2 exists to surface them, and never edits the report.
+#  * reach.index.noindex_on_content reports any noindex on a non-utility page
+#    as critical, including deliberate ones (a site search page, a
+#    version-pinned package page, a cart-upsell collection).
+#  * When the seed URL redirects (e.g. / to /en/stable/), relative links on
+#    that page are resolved against the pre-redirect URL, so
+#    reach.http.broken_internal_links can list links that work in a browser.
+#  * Checks marked "likely" are heuristics and say so: act.orient.* and
+#    act.cta.* read the served HTML, so a page whose menus and buttons are built
+#    by JavaScript can read as having none; read.nontext.key_fact_image_only
+#    infers from image filenames.
+#
+# ---- GUARDRAILS DURING THE RUN ------------------------------------------------
+# Read-only (GET and HEAD only), robots.txt obeyed for our own crawl, no
+# cookies, credentials or logins, at most 25 pages, per-host delay and backoff,
+# private and loopback addresses refused, bot user-agent probing off unless
+# --probe-bot-ua is passed for a site you own.
