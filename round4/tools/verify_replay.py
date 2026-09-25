@@ -50,6 +50,10 @@ ENGINE_CMD = re.compile(
     r"((?:[ \t]+--[a-z][a-z-]*(?:[ \t]+(?!--)[^\s()]+)?)*)"
 )
 
+CHALLENGE = re.compile(r"client challenge|just a moment|attention required|access denied|"
+                       r"are you a (human|robot)|verify you are human|request blocked|you have been blocked|"
+                       r"pardon our interruption", re.I)
+
 FAILS: list[str] = []
 COUNT = 0
 
@@ -197,6 +201,13 @@ def main(argv: list[str] | None = None) -> int:
                 continue
             rep = json.loads(target.read_text(encoding="utf-8"))
             check(not floor(rep), f"report meets the Round 3 schema floor for {url}", "; ".join(floor(rep)[:2]))
+            pages_file = out_dir / "evidence" / "pages.jsonl"
+            titles = [json.loads(l).get("title") or "" for l in pages_file.read_text(encoding="utf-8").splitlines()
+                      if l.strip()] if pages_file.is_file() else []
+            bot_checks = [t for t in titles if CHALLENGE.search(t)]
+            check(not bot_checks, f"no sampled page was a CDN bot-check page for {url}",
+                  f"{len(bot_checks)} page(s) titled {bot_checks[0]!r}: this machine is being challenged; "
+                  f"record from another network" if bot_checks else "")
             s = rep["summary"]
             print(f"  -> {rep['site']}: status {rep['audit_status']}, {rep['evidence_bundle'].get('pages_fetched')} pages, "
                   f"{s['total_findings']} findings (C{s['critical']} H{s['high']} M{s['medium']} L{s['low']} "

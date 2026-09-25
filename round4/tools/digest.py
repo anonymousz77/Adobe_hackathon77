@@ -20,6 +20,27 @@ from pathlib import Path
 
 SEV = ["critical", "high", "medium", "low", "info"]
 
+# Titles CDNs and WAFs give the page they serve a crawler instead of the real one.
+CHALLENGE = re.compile(r"client challenge|just a moment|attention required|access denied|"
+                       r"are you a (human|robot)|verify you are human|request blocked|you have been blocked|"
+                       r"pardon our interruption", re.I)
+
+
+def challenge_pages(report_path: Path) -> list[str]:
+    """Pages in the evidence bundle whose title says a bot check answered, not the site."""
+    pages = report_path.parent / "evidence" / "pages.jsonl"
+    if not pages.is_file():
+        return []
+    hits = []
+    for line in pages.read_text(encoding="utf-8").splitlines():
+        try:
+            page = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if CHALLENGE.search(page.get("title") or ""):
+            hits.append(f"{page.get('url')} ({page.get('title')!r})")
+    return hits
+
 
 def one_line(text, limit: int) -> str:
     text = re.sub(r"\s+", " ", str(text or "")).strip()
@@ -55,6 +76,10 @@ def main(argv: list[str] | None = None) -> int:
             print(f"   > {f['id']} {f['severity']}/{f.get('confidence')} ICE {a.get('ice')} {f.get('check_id')}: "
                   f"{one_line(f['title'], 120)}")
             print(f"     evidence: {one_line(f['evidence'], 420)}")
+        bot_checks = challenge_pages(path)
+        if bot_checks:
+            print(f"   !! {len(bot_checks)} sampled page(s) were a bot-check page, audited as content: "
+                  f"{'; '.join(bot_checks[:4])}")
         for lim in r.get("limitations") or []:
             if "probe-bot-ua" not in (lim.get("reason") or ""):
                 print(f"   limitation: {one_line(lim.get('reason'), 220)}")

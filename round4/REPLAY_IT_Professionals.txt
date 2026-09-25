@@ -111,6 +111,9 @@ EXPECTED_OUTPUT:  brand-ai-readiness-audit/audit-output/audit-report.json
 #    act.cta.* read the served HTML, so a page whose menus and buttons are built
 #    by JavaScript can read as having none; read.nontext.key_fact_image_only
 #    infers from image filenames.
+#  * If a CDN answers the crawler with a bot-check page instead of the page,
+#    that page is audited as content (its title and word count in the
+#    evidence show it). Seen on pypi.org; not seen in our runs of TEST_SITE_URLS.
 #
 # ---- GUARDRAILS DURING THE RUN ------------------------------------------------
 # Read-only (GET and HEAD only), robots.txt obeyed for our own crawl, no
