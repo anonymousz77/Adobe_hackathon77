@@ -1,0 +1,5 @@
+# SHA-256 of the Round 3 submission.zip, the package the judges already hold.
+# The engine demonstrated in the Round 4 video must be exactly this file.
+# Check it: sha256sum submission.zip   (macOS: shasum -a 256 submission.zip;
+#           Windows: certutil -hashfile submission.zip SHA256)
+1c872c598dcac741c712cbf9e671f024881a9ba251e2b4da66995f81b6cf8dcf  submission.zip
