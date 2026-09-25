@@ -112,6 +112,16 @@ python3 -c "import shutil; shutil.copytree('skills', '.claude/skills')"
 claude --model claude-opus-5-5 --allowedTools "Skill" "Bash(python:*)" "Bash(python3:*)" "Read" "Grep" "Glob"
 ```
 
+Three things the live session does that a rehearsal does not:
+
+- The first time Claude Code opens a new folder it asks whether to trust it.
+  Answer yes on camera; that is part of the run.
+- A long paste shows in the input box as `[Pasted text #1]`, so the prompt
+  itself is not readable on screen. Show step 2 of the manifest for two
+  seconds before you paste it, then type the URL after the pasted block.
+- Show the model with `/status` right after Claude Code starts, or point at
+  the model name in the welcome banner.
+
 On Windows use `python` instead of `python3` and
 `Get-FileHash submission.zip -Algorithm SHA256` (PowerShell) or
 `certutil -hashfile submission.zip SHA256` (cmd) for the hash. The step-2

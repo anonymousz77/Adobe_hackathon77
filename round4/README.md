@@ -35,7 +35,7 @@ The Round 3 `submission.zip` is not resubmitted; the judges already hold it.
 | `REPLAY_IT_Professionals.txt` | **The manifest.** Six fixed fields, then commentary: a harness-free fallback, what the video's run finds, determinism, and the frozen engine's known limits |
 | `VIDEO_SCRIPT.md` | Word-budgeted narration. Every Part 1 claim names the file and line on screen; Part 2 is a shot list for the live run |
 | `RECORDING_RUNBOOK.md` | Pinned setup, same-day pre-flight, how to record and edit within the rules, upload checklist |
-| `LIVE_TEST_REPORT.md` | What we ran before recording: 20 real sites, rendering on and off, determinism, six agent rehearsals, the findings we checked by hand, and the decisions that followed |
+| `LIVE_TEST_REPORT.md` | What we ran before recording: 20 real sites, rendering on and off, determinism, seven agent rehearsals, the findings we checked by hand, and the decisions that followed |
 | `SUBMITTED_ZIP.sha256` | The pinned hash of the Round 3 artifact |
 | `urls/generalization.txt` | The 20 sites used to test generalisation |
 | `tools/check_engine_frozen.py` | Proves this repo's marketplace, and the folder you record from, are byte-identical to the pinned zip |

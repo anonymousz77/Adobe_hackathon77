@@ -105,14 +105,3 @@ jobs:
           path: all-runs
       - name: One table for every site the engine was run against
         run: python round4/tools/digest.py all-runs --evidence 3
-      - name: Diagnostics for findings under review
-        continue-on-error: true
-        run: |
-          echo "--- www.mit.edu canonical tags (engine: cross-host canonical to tlecms.mit.edu)"
-          for p in / /about; do echo "$p"; curl -sL "https://www.mit.edu$p" | grep -io '<link[^>]*rel="canonical"[^>]*>' | head -2; done
-          echo "--- vercel.com/docs context of 'you are Claude' (engine: prompt injection, critical)"
-          curl -sL https://vercel.com/docs | grep -o '.\{0,300\}you are Claude.\{0,200\}' | head -3
-          echo "--- theguardian.com homepage JSON-LD blocks (engine: none on the homepage)"
-          curl -sL https://www.theguardian.com/ | grep -c 'application/ld+json'
-          echo "--- bbc.com robots.txt lines cited by F-001"
-          curl -s https://www.bbc.com/robots.txt | sed -n '110,182p' | grep -n -iE 'user-agent|disallow: /$' | head -40

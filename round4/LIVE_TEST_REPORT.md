@@ -17,13 +17,13 @@ was changed, and nothing could be: it is frozen.
   [`.github/workflows/round4.yml`](../.github/workflows/round4.yml): every run
   exited 0 with a report that meets the Round 3 schema floor, and all finished
   in under a minute.
-- **The manifest replays** on a clean runner: `verify_replay.py` parsed it,
-  cross-checked its fields and replayed its command against every
-  `TEST_SITE_URLS` entry, twice, with every check passing.
+- **The manifest replays** on a clean runner: `verify_replay.py --twice`
+  parsed it, cross-checked its fields, and replayed its command against every
+  `TEST_SITE_URLS` entry twice. All 42 checks passed.
 - **Deterministic**: back-to-back runs gave identical findings on every URL we
   repeated, and re-analysing a saved evidence bundle gave an identical report
   (all fields except the bundle path).
-- **Six agent rehearsals** with Claude Code 2.1.282 and `claude-opus-5-5`: the
+- **Seven agent rehearsals** with Claude Code 2.1.282 and `claude-opus-5-5`: the
   agent loaded the entrypoint with the Skill tool and ran the documented engine
   command every time; each run took 33–59 s end to end.
 - **The video's URL, theguardian.com**, gives one critical, confirmed finding
@@ -55,6 +55,10 @@ was changed, and nothing could be: it is frozen.
 | www.python.org | partial | 25 | 0 | 3 | 26 | 14 | 0 | 43 | `high/likely extract.ans.fact_coverage_gap` |
 | www.theguardian.com | partial | 25 | 1 | 1 | 33 | 10 | 1 | 46 | `critical/confirmed reach.robots.ai_search_bot_blocked` |
 | www.wikipedia.org | partial | 1 | 0 | 2 | 7 | 0 | 0 | 9 | `high/likely act.orient.no_value_proposition` |
+
+No site served a CDN bot-check page to the runners (`digest.py` looks for
+one in every sampled page's title), and the Guardian's result was the same in
+every run that day: 46 findings, 1 critical, 37 capped behind F-001.
 
 `partial` is expected: the runs pass `--no-render`, and the report says which
 three browser-dependent checks that affected rather than passing them.
@@ -176,6 +180,15 @@ Run headless (`claude -p`) from a fresh unzip, following the manifest.
 | manifest | pypi.org | 58 s | yes | exact, after one refused `; echo $?` | F-011 no structured data | supported |
 | manifest, no chaining | proxy.golang.org | 41 s | yes | **exact, first try** | F-002 no structured data | supported |
 | final manifest | jsr.io | 59 s | yes | **exact, first try** | F-001 noindex header | supported, and it noted the pages are version-pinned |
+| final manifest\* | Round 3 fixture `site_b`, served locally | 44 s | yes | **exact, first try** | F-001 robots.txt blocks 3 retrieval crawlers | supported: fetched robots.txt and matched lines 6, 9 and 12 |
+
+\* The video's F-001 is a robots.txt finding, and theguardian.com is not
+reachable from the session that ran these rehearsals, so the same drill-down
+was rehearsed on the Round 3 fixture whose robots.txt blocks OAI-SearchBot,
+PerplexityBot and Claude-SearchBot, served on 127.0.0.1. That needs the
+engine's `--allow-private-hosts` flag, the only change to the prompt. The
+agent also explained, correctly, why the wildcard group's `Allow: /` does not
+apply to crawlers that have their own group.
 
 Two prompt changes came out of this: (1) ask for the engine command "with
 nothing added before or after it in the same shell call", because a chained

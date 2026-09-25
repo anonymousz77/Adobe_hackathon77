@@ -130,16 +130,18 @@ claude --version
 
 Paste the four step-1 lines from the REPLAY file (unzip, `cd`, the
 `.claude/skills` copy, `claude --model claude-opus-5-5 --allowedTools …`).
-When Claude Code opens, type `/status` so the version and model are on screen,
-then `Esc`.
+If Claude Code asks whether to trust the folder, answer yes. Type `/status` so
+the version and model are on screen (or point at the model in the welcome
+banner), then `Esc`.
 
 > Claude Code only discovers skills under .claude/skills, so that's an unchanged
 > copy; the agent runs the scripts in skills/.
 
 ### 0:22–0:32 · The URL, entered on camera
 
-Paste the step-2 prompt, then **type** `https://www.theguardian.com/` after
-`URL:` and press Enter.
+Show step 2 of the manifest for two seconds (a long paste appears as
+`[Pasted text #1]`, so this is how the viewer sees the prompt), paste it, then
+**type** `https://www.theguardian.com/` after it and press Enter.
 
 > The Guardian — not one of our fixtures, and the engine is frozen, so nothing
 > was tuned for it.
@@ -169,6 +171,10 @@ critical, 1 high, 37 capped behind F-001.)
 ### 1:10–1:48 · Drill-down on F-001
 
 Scroll to part (4): evidence, script, severity reason, fix, patch, live check.
+
+(Say what the agent actually printed in its live check. In the rehearsal of a
+robots.txt drill-down it fetched the file and matched every cited line number,
+which is what the lines below assume.)
 
 > F-001, critical and confirmed: robots.txt line 102, Disallow slash, blocks
 > six AI retrieval crawlers — PerplexityBot, Claude-SearchBot and four more —
