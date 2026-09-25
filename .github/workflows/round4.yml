@@ -81,7 +81,7 @@ jobs:
       - id: slug
         run: echo "slug=$(printf '%s' '${{ matrix.url }}' | sed -E 's#^https?://##; s#[^A-Za-z0-9]+#_#g; s#_+$##')" >> "$GITHUB_OUTPUT"
       - name: Audit ${{ matrix.url }} with the unchanged engine
-        run: python round4/tools/live_matrix.py "${{ matrix.url }}" --out runs --evidence 8 --json runs/summary.json
+        run: python round4/tools/live_matrix.py "${{ matrix.url }}" --out runs --evidence 8 --verify 3 --json runs/summary.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -89,3 +89,30 @@ jobs:
           path: runs/
           if-no-files-found: warn
           retention-days: 30
+
+  digest:
+    needs: generalization
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.15"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: live-*
+          path: all-runs
+      - name: One table for every site the engine was run against
+        run: python round4/tools/digest.py all-runs --evidence 3
+      - name: Diagnostics for findings under review
+        continue-on-error: true
+        run: |
+          echo "--- docs.pytest.org redirect chain and <base>"
+          curl -sIL https://docs.pytest.org/ | grep -iE '^(HTTP|location)'
+          curl -sL https://docs.pytest.org/ | grep -io '<base[^>]*>' | head -3
+          curl -sL https://docs.pytest.org/ | grep -o 'href="[^"]*changelog[^"]*"' | head -3
+          curl -sI https://docs.pytest.org/changelog.html | head -1
+          curl -sI https://docs.pytest.org/en/stable/changelog.html | head -1
+          echo "--- theguardian.com robots.txt around the cited line"
+          curl -s https://www.theguardian.com/robots.txt | sed -n '70,110p'

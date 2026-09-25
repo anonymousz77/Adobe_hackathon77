@@ -74,7 +74,64 @@ def one_line(text: str, limit: int) -> str:
     return text if len(text) <= limit else text[: limit - 1] + "…"
 
 
-def summarise(url: str, out: Path, code: int, elapsed: float, stderr: str, evidence: int) -> dict:
+# A verification line is only executed if it is a plain read-only fetch piped
+# through text filters: no command substitution, no redirection, no chaining.
+SAFE_VERIFY = re.compile(
+    r"^curl -sI? '?https?://[^\s'`$<>;&|]+'?"
+    r"(\s*\|\s*(grep|sed|head|wc|tr|sort)\b[^`$<>;&|]*)*"
+    r"(\s+#[^`$]*)?$"
+)
+
+
+def corroborate(report: dict, limit: int) -> None:
+    """Re-check the top confirmed findings against the live site.
+
+    Two ways, both read-only: robots.txt findings cite line numbers, so those
+    lines are fetched and printed; other findings carry the engine's own
+    verification command, which is run when it is a plain curl-and-filter line.
+    Output is printed for a human to judge. It never changes the report.
+    """
+    import urllib.request
+
+    done = 0
+    for f in report["findings"]:
+        if done >= limit:
+            break
+        if f.get("confidence") != "confirmed":
+            continue
+        done += 1
+        print(f"  ~~ corroborate {f['id']} {f.get('check_id')}")
+        if (f.get("check_id") or "").startswith("reach.robots."):
+            origin = f"https://{report['site']}"
+            lines = sorted({int(n) for n in re.findall(r"\(line (\d+)\)", f.get("evidence", ""))})
+            try:
+                req = urllib.request.Request(origin + "/robots.txt", headers={"User-Agent": "round4-corroborate"})
+                body = urllib.request.urlopen(req, timeout=20).read().decode("utf-8", "replace").splitlines()
+            except Exception as exc:  # noqa: BLE001 - a failed re-check is reported, not fatal
+                print(f"     could not fetch robots.txt: {exc}")
+                continue
+            for n in lines:
+                start = max(1, n - 25)
+                group = [i for i in range(start, min(n, len(body) + 1)) if body[i - 1].lower().startswith("user-agent")]
+                for i in group + [n]:
+                    print(f"     robots.txt:{i}: {body[i - 1] if i <= len(body) else '(beyond end of file)'}")
+            continue
+        for line in (f.get("suggested_action") or {}).get("verification", "").splitlines():
+            line = line.strip()
+            if not SAFE_VERIFY.match(line):
+                continue
+            try:
+                proc = subprocess.run(["bash", "-c", line], capture_output=True, text=True, timeout=30)
+                shown = [l for l in proc.stdout.splitlines() if l.strip()][:6]
+                print(f"     $ {one_line(line, 160)}")
+                for l in shown or ["(no output)"]:
+                    print(f"       {one_line(l, 200)}")
+            except Exception as exc:  # noqa: BLE001
+                print(f"     $ {one_line(line, 160)} -> {exc}")
+
+
+def summarise(url: str, out: Path, code: int, elapsed: float, stderr: str, evidence: int,
+              verify: int = 0) -> dict:
     row = {"url": url, "exit": code, "elapsed_s": round(elapsed, 1), "out": str(out)}
     report_path = out / "audit-report.json"
     if not report_path.is_file():
@@ -129,6 +186,8 @@ def summarise(url: str, out: Path, code: int, elapsed: float, stderr: str, evide
         print(f"      verify: {one_line(a.get('verification'), 200)}")
     for lim in row["limitations"]:
         print(f"  LIMITATION: {lim}")
+    if verify:
+        corroborate(report, verify)
     return row
 
 
@@ -143,6 +202,8 @@ def main(argv: list[str] | None = None) -> int:
                     help="let the engine render with Playwright (default passes --no-render, as the REPLAY does)")
     ap.add_argument("--evidence", type=int, default=3, help="print full evidence for the top N findings")
     ap.add_argument("--json", type=Path, default=None, help="write the per-URL summary here")
+    ap.add_argument("--verify", type=int, default=0,
+                    help="re-check the top N confirmed findings against the live site (needs bash + curl)")
     args = ap.parse_args(argv)
 
     urls = list(args.urls)
@@ -193,7 +254,8 @@ def main(argv: list[str] | None = None) -> int:
                 code, stderr = proc.returncode, proc.stderr
             except subprocess.TimeoutExpired:
                 code, stderr = -9, "hard timeout: the run exceeded its time budget + 120 s"
-            rows.append(summarise(url, out, code, time.monotonic() - started, stderr, args.evidence))
+            rows.append(summarise(url, out, code, time.monotonic() - started, stderr, args.evidence,
+                                  args.verify))
             print()
     finally:
         if not keep:
